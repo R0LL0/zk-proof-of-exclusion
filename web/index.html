@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proof-of-Exclusion — prove you're NOT on a list, in zero knowledge</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#141922; --line:#232b39; --fg:#e6edf3; --mut:#8b98a9;
+          --ok:#3fb950; --bad:#f85149; --acc:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:40px 20px 80px; }
+  h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.02em; }
+  .sub { color:var(--mut); margin:0 0 28px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+           padding:22px; margin:18px 0; }
+  .badge { display:inline-block; font-size:12px; color:var(--acc);
+           border:1px solid var(--line); border-radius:999px; padding:3px 10px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:var(--mut); margin:0 0 8px; }
+  select, button { font:inherit; }
+  select { width:100%; background:#0d1117; color:var(--fg); border:1px solid var(--line);
+           border-radius:8px; padding:10px 12px; }
+  button { margin-top:16px; background:var(--acc); color:#04101f; border:0; font-weight:600;
+           padding:11px 18px; border-radius:8px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .steps { list-style:none; padding:0; margin:16px 0 0; }
+  .steps li { display:flex; gap:10px; align-items:center; padding:6px 0; color:var(--mut); }
+  .steps li .dot { width:9px; height:9px; border-radius:50%; background:var(--line); flex:none; }
+  .steps li.run .dot { background:var(--acc); animation:pulse 1s infinite; }
+  .steps li.done { color:var(--fg); } .steps li.done .dot { background:var(--ok); }
+  .steps li.err  { color:var(--bad); } .steps li.err .dot { background:var(--bad); }
+  @keyframes pulse { 50% { opacity:.35; } }
+  .verdict { font-size:18px; font-weight:600; margin-top:18px; }
+  .verdict.ok { color:var(--ok); } .verdict.bad { color:var(--bad); }
+  .muted { color:var(--mut); font-size:13px; }
+  pre { background:#0d1117; border:1px solid var(--line); border-radius:8px; padding:12px;
+        overflow:auto; font-size:12px; color:#b9c4d0; }
+  code { color:#d2a8ff; }
+  a { color:var(--acc); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .kv { background:#0d1117; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kv b { display:block; font-size:11px; color:var(--mut); font-weight:500; }
+  .kv span { font-size:12px; word-break:break-all; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">zk-SNARK · client-side · nothing revealed</span>
+  <h1>Proof-of-Exclusion</h1>
+  <p class="sub">Prove you are <b>not</b> on a signed blocklist (sanctions, denylist, ban list)
+     without revealing who you are. The proof is generated <b>in your browser</b>.</p>
+
+  <div class="panel">
+    <div class="grid" style="margin-bottom:16px">
+      <div class="kv"><b>Authority-signed list root</b><span id="root">—</span></div>
+      <div class="kv"><b>Blocklist size</b><span id="size">—</span></div>
+    </div>
+    <label for="who">Pick an identity to test</label>
+    <select id="who"></select>
+    <button id="go" disabled>Generate zero-knowledge proof</button>
+
+    <ul class="steps" id="steps">
+      <li data-k="witness"><span class="dot"></span> Build non-membership witness</li>
+      <li data-k="prove"><span class="dot"></span> Generate zk-SNARK proof (in-browser)</li>
+      <li data-k="verify"><span class="dot"></span> Verify proof (verifier side)</li>
+    </ul>
+
+    <div class="verdict" id="verdict"></div>
+    <p class="muted" id="detail"></p>
+  </div>
+
+  <div class="panel">
+    <b>What the verifier receives</b>
+    <p class="muted">Only the proof + these public signals. Your identity is never here.</p>
+    <pre id="public">—</pre>
+  </div>
+
+  <p class="muted">
+    Soundness: the authority's EdDSA signature over the list root is checked
+    <i>inside</i> the circuit, so a user cannot fake a favourable list.
+    <a href="https://github.com/R0LL0/zk-proof-of-exclusion">Source &amp; circuit →</a>
+  </p>
+</div>
+
+<script src="vendor/snarkjs.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

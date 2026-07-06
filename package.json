@@ -1,0 +1,28 @@
+{
+  "name": "zk-proof-of-exclusion",
+  "version": "0.1.0",
+  "description": "Prove you are NOT on a signed blocklist (e.g. sanctions/OFAC) in zero knowledge — reveal nothing but a single boolean. Privacy-preserving compliance screening.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:circuit": "bash scripts/build_circuit.sh",
+    "test": "node --test test/",
+    "prove:demo": "node scripts/demo_prove_verify.js"
+  },
+  "keywords": [
+    "zero-knowledge",
+    "zk-snark",
+    "circom",
+    "snarkjs",
+    "verifiable-credentials",
+    "sanctions",
+    "compliance",
+    "non-membership",
+    "privacy"
+  ],
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.5"
+  }
+}

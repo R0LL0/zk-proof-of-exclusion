@@ -1,0 +1,10 @@
+node_modules/
+bin/
+build/*.ptau
+build/*.zkey
+build/*.r1cs
+build/*.sym
+build/exclusion_js/
+*.log
+.DS_Store
+.env
