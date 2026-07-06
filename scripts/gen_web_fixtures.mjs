@@ -17,7 +17,7 @@ import { Authority, toIdentity, buildCircuitInput } from "../lib/poe.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const build = path.join(root, "build");
-const web = path.join(root, "web");
+const web = path.join(root, "docs"); // served by GitHub Pages from /docs
 const vendor = path.join(web, "vendor");
 fs.mkdirSync(vendor, { recursive: true });
 
@@ -66,9 +66,9 @@ async function main() {
   fs.copyFileSync(path.join(build, "exclusion_final.zkey"), path.join(vendor, "exclusion_final.zkey"));
   fs.copyFileSync(path.join(root, "node_modules", "snarkjs", "build", "snarkjs.min.js"), path.join(vendor, "snarkjs.min.js"));
 
-  console.log("web/ fixtures + vendor artifacts written:");
+  console.log("docs/ fixtures + vendor artifacts written:");
   console.log("  identities:", identities.length, "(clean:", clean.length, "blocked:", blocked.length + ")");
-  console.log("  wasm/zkey/vkey/snarkjs copied to web/vendor/");
+  console.log("  wasm/zkey/vkey/snarkjs copied to docs/vendor/");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

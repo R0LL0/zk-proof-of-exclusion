@@ -42,12 +42,14 @@ Proof generation runs in **~0.6 s** on a laptop (~22k constraints, Groth16).
 
 ### Try the browser demo
 
+**Live demo:** https://r0ll0.github.io/zk-proof-of-exclusion/
+
 ```bash
-node scripts/gen_web_fixtures.mjs      # bundle wasm/zkey + demo fixtures into web/
-npx serve web                          # or any static server
+node scripts/gen_web_fixtures.mjs      # bundle wasm/zkey + demo fixtures into docs/
+npx serve docs                         # or any static server
 ```
 
-Open the page, pick a "clean" identity → a zk-SNARK proof is generated **client-side**; pick a blocklisted one → no witness exists and the attempt is refused. The `web/` folder is fully static and **GitHub Pages-ready**.
+Open the page, pick a "clean" identity → a zk-SNARK proof is generated **client-side**; pick a blocklisted one → no witness exists and the attempt is refused. The `docs/` folder is fully static and served directly by **GitHub Pages**.
 
 ## How it's built
 
@@ -62,7 +64,7 @@ circuits/exclusion.circom     the sound non-membership circuit
 lib/poe.mjs                   Authority (signs list) + witness/input helpers
 scripts/                      build, trusted setup, CLI demo, web fixtures
 test/e2e.test.mjs             clean-proof, blocklisted-rejected, forged-root-rejected
-web/                          static client-side demo (GitHub Pages-ready)
+docs/                         static client-side demo (served by GitHub Pages)
 ```
 
 ## Real-world use cases
