@@ -73,7 +73,7 @@ async function run() {
       : "❌ Proof failed to verify.";
     $("detail").textContent = `Proof generated in ${ms} ms, entirely in your browser.`;
     $("public").textContent = JSON.stringify(
-      { publicSignals, note: "authorityAx, authorityAy, root, expiry, challenge — no identity" },
+      { publicSignals, note: "authorityAx, authorityAy, issuerAx, issuerAy, root, expiry, challenge — no identity, no holder secret" },
       null, 2);
   } catch (e) {
     ["witness", "prove", "verify"].forEach((k) => {

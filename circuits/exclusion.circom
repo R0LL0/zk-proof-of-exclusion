@@ -5,72 +5,100 @@ include "circomlib/circuits/eddsaposeidon.circom";
 include "circomlib/circuits/smt/smtverifier.circom";
 
 /*
- * Proof-of-Exclusion
- * ------------------
- * Prove that a *secret* identity is NOT a member of a blocklist (e.g. an OFAC /
- * sanctions list) that has been committed to by a trusted authority, revealing
- * nothing about the identity itself.
+ * Proof-of-Exclusion  (v2 — credential-bound)
+ * -------------------------------------------
+ * Prove that a *secret* identity is NOT a member of an authority-signed
+ * blocklist (e.g. sanctions), revealing nothing about the identity — AND that
+ * the prover is genuinely entitled to that identity. Three cryptographic links,
+ * all checked INSIDE the circuit, close the gaps a naive design leaves open:
  *
- * Soundness is the whole point here, and it hinges on two links that the naive
- * "verify the signature in JS, then prove a predicate" design breaks:
+ *   1. Blocklist membership. The list is a Sparse Merkle Tree of
+ *      Poseidon(identity) leaves; the prover supplies an *exclusion* witness
+ *      (SMTVerifier, fnc = 1) against `root`.
  *
- *   1. The list is a Sparse Merkle Tree of Poseidon(identity) leaves. The prover
- *      supplies an *exclusion* proof (SMTVerifier, fnc = 1) against `root`.
- *   2. `root` is not trusted blindly: the authority's EdDSA signature over
- *      Poseidon(root, expiry) is verified INSIDE the circuit, against the
- *      authority public key that is a PUBLIC input. A holder therefore cannot
- *      invent a favourable root — they can only use one the authority signed.
+ *   2. Root authenticity. `root` is not trusted blindly — the authority's EdDSA
+ *      signature over Poseidon(root, expiry) is verified against the authority
+ *      public key (a PUBLIC input). A user cannot invent a favourable list.
  *
- * A `challenge` public input (supplied by the verifier at request time) is bound
- * into the proof so a proof captured for one verification cannot be replayed.
+ *   3. Identity ownership (NEW in v2). `identity` is not free-choice. An issuer
+ *      (KYC provider, government, ...) signs a credential over
+ *      Poseidon(identity, holderCommit), and holderCommit = Poseidon(holderSecret).
+ *      The circuit verifies the issuer signature AND that the prover knows
+ *      holderSecret. So a sanctioned user cannot (a) make up a clean identity —
+ *      it wouldn't be issuer-signed — nor (b) reuse someone else's credential —
+ *      they don't know that holder's secret.
  *
- * PUBLIC  : authorityAx, authorityAy, root, expiry, challenge
- * PRIVATE : identity, S, R8x, R8y, siblings[], oldKey, oldValue, isOld0
+ * A verifier-supplied `challenge` is bound in to stop proof replay.
+ *
+ * PUBLIC  : authorityAx, authorityAy, issuerAx, issuerAy, root, expiry, challenge
+ * PRIVATE : identity, holderSecret,
+ *           aS, aR8x, aR8y            (authority signature over the root)
+ *           iS, iR8x, iR8y            (issuer signature over the credential)
+ *           siblings[], oldKey, oldValue, isOld0   (SMT non-inclusion witness)
  */
 template ProofOfExclusion(nLevels) {
-    // ---- Public: the authority anyone can look up in a registry ----
+    // ---- Public ----
     signal input authorityAx;
     signal input authorityAy;
-    // ---- Public: the signed list state + a freshness bound ----
+    signal input issuerAx;
+    signal input issuerAy;
     signal input root;
     signal input expiry;
-    // ---- Public: verifier-chosen nonce (anti-replay) ----
     signal input challenge;
 
-    // ---- Private: the thing we never reveal ----
+    // ---- Private ----
     signal input identity;
+    signal input holderSecret;
 
-    // ---- Private: authority signature over Poseidon(root, expiry) ----
-    signal input S;
-    signal input R8x;
-    signal input R8y;
+    signal input aS;    // authority sig
+    signal input aR8x;
+    signal input aR8y;
 
-    // ---- Private: SMT non-inclusion witness ----
+    signal input iS;    // issuer sig
+    signal input iR8x;
+    signal input iR8y;
+
     signal input siblings[nLevels];
     signal input oldKey;
     signal input oldValue;
     signal input isOld0;
 
-    // 1) Bind the signed message: M = Poseidon(root, expiry)
-    component msg = Poseidon(2);
-    msg.inputs[0] <== root;
-    msg.inputs[1] <== expiry;
+    // --- (2) Authority signed (root, expiry) ---------------------------------
+    component amsg = Poseidon(2);
+    amsg.inputs[0] <== root;
+    amsg.inputs[1] <== expiry;
 
-    // 2) Verify the authority actually signed this (root, expiry).
-    component sig = EdDSAPoseidonVerifier();
-    sig.enabled <== 1;
-    sig.Ax  <== authorityAx;
-    sig.Ay  <== authorityAy;
-    sig.S   <== S;
-    sig.R8x <== R8x;
-    sig.R8y <== R8y;
-    sig.M   <== msg.out;
+    component asig = EdDSAPoseidonVerifier();
+    asig.enabled <== 1;
+    asig.Ax <== authorityAx;
+    asig.Ay <== authorityAy;
+    asig.S  <== aS;
+    asig.R8x <== aR8x;
+    asig.R8y <== aR8y;
+    asig.M  <== amsg.out;
 
-    // 3) The blocklist key is Poseidon(identity) — same as the authority inserts.
+    // --- (3) Holder ownership: holderCommit = Poseidon(holderSecret) ----------
+    component hc = Poseidon(1);
+    hc.inputs[0] <== holderSecret;
+
+    // Issuer signed the credential Poseidon(identity, holderCommit) -----------
+    component cmsg = Poseidon(2);
+    cmsg.inputs[0] <== identity;
+    cmsg.inputs[1] <== hc.out;
+
+    component isig = EdDSAPoseidonVerifier();
+    isig.enabled <== 1;
+    isig.Ax <== issuerAx;
+    isig.Ay <== issuerAy;
+    isig.S  <== iS;
+    isig.R8x <== iR8x;
+    isig.R8y <== iR8y;
+    isig.M  <== cmsg.out;
+
+    // --- (1) Non-membership of Poseidon(identity) in the signed tree ----------
     component leaf = Poseidon(1);
     leaf.inputs[0] <== identity;
 
-    // 4) Prove that key is NOT in the tree at `root` (fnc = 1 => exclusion).
     component excl = SMTVerifier(nLevels);
     excl.enabled  <== 1;
     excl.fnc      <== 1;          // 1 = verify exclusion / non-membership
@@ -84,11 +112,10 @@ template ProofOfExclusion(nLevels) {
         excl.siblings[i] <== siblings[i];
     }
 
-    // 5) Bind the verifier's challenge into the constraint system so the proof
-    //    is non-transferable to a different challenge value.
+    // --- Bind the verifier challenge so a proof is non-transferable -----------
     signal challengeBound;
     challengeBound <== challenge * challenge;
 }
 
-component main {public [authorityAx, authorityAy, root, expiry, challenge]} =
+component main {public [authorityAx, authorityAy, issuerAx, issuerAy, root, expiry, challenge]} =
     ProofOfExclusion(20);

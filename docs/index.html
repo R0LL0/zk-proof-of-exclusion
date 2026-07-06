@@ -77,8 +77,10 @@
   </div>
 
   <p class="muted">
-    Soundness: the authority's EdDSA signature over the list root is checked
-    <i>inside</i> the circuit, so a user cannot fake a favourable list.
+    Soundness: the authority's signature over the list root <b>and</b> an
+    issuer's credential over the identity are both checked <i>inside</i> the
+    circuit — so a user can't fake a favourable list, invent a clean identity,
+    or reuse someone else's credential.
     <a href="https://github.com/R0LL0/zk-proof-of-exclusion">Source &amp; circuit →</a>
   </p>
 </div>
